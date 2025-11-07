@@ -178,16 +178,14 @@ eventSchema.pre<IEvent>("save", async function (next) {
       this.slug = generateSlug(this.title);
 
       // Ensure slug uniqueness by checking existing documents
-      if (!this.isNew) {
-        const existingEvent = await mongoose.models.Event.findOne({
-          slug: this.slug,
-          _id: { $ne: this._id },
-        });
+      const existingEvent = await mongoose.models.Event.findOne({
+        slug: this.slug,
+        ...(this.isNew ? {} : { _id: { $ne: this._id } }),
+      });
 
-        if (existingEvent) {
-          // Append timestamp to make slug unique
-          this.slug = `${this.slug}-${Date.now()}`;
-        }
+      if (existingEvent) {
+        // Append timestamp to make slug unique
+        this.slug = `${this.slug}-${Date.now()}`;
       }
     }
 

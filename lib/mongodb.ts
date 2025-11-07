@@ -6,7 +6,7 @@ import mongoose from "mongoose";
  */
 declare global {
   // eslint-disable-next-line no-var
-  var mongoose: {
+  var __mongooseCache: {
     conn: mongoose.Connection | null;
     promise: Promise<mongoose.Connection> | null;
   };
@@ -29,10 +29,10 @@ if (!MONGODB_URI) {
  * In production, Next.js will not reinitialize the module, so caching is less critical
  * In development, hot reloading can cause multiple connections without caching
  */
-let cached = global.mongoose;
+let cached = global.__mongooseCache;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = global.__mongooseCache = { conn: null, promise: null };
 }
 
 /**
