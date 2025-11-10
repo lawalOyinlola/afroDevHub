@@ -10,16 +10,10 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
 
-    let rawEvent: Record<string, FormDataEntryValue>;
-
-    try {
-      rawEvent = Object.fromEntries(formData.entries());
-    } catch {
-      return NextResponse.json(
-        { message: "Invalid JSON data format" },
-        { status: 400 }
-      );
-    }
+    const rawEvent = Object.fromEntries(formData.entries()) as Record<
+      string,
+      FormDataEntryValue
+    >;
 
     const file = formData.get("image") as File | null;
 
@@ -28,6 +22,24 @@ export async function POST(req: NextRequest) {
         { message: "Image file is required" },
         { status: 400 }
       );
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { message: "Only JPEG, PNG, and WebP images are allowed" },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (e.g., 5MB limit)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { message: "Image size must not exceed 5MB" },
+        { status: 400 }
+      );
+    }
 
     let tags: string[];
     let agenda: string[];
@@ -47,6 +59,7 @@ export async function POST(req: NextRequest) {
       description: String(rawEvent.description ?? ""),
       overview: String(rawEvent.overview ?? ""),
       image: "",
+      imagePublicId: "",
       venue: String(rawEvent.venue ?? ""),
       location: String(rawEvent.location ?? ""),
       date: String(rawEvent.date ?? ""),
@@ -124,11 +137,12 @@ export async function POST(req: NextRequest) {
           message: "Image upload failed",
           error: error instanceof Error ? error.message : "Unknown",
         },
-        { status: 502 }
+        { status: 500 }
       );
     }
 
     eventPayload.image = uploadResult.secure_url;
+    eventPayload.imagePublicId = uploadResult.public_id;
 
     try {
       const createdEvent = await Event.create(eventPayload);
@@ -172,7 +186,10 @@ export async function GET() {
     );
   } catch (e) {
     return NextResponse.json(
-      { message: "Event fetching failed", error: e },
+      {
+        message: "Event fetching failed",
+        error: e instanceof Error ? e.message : "Unknown",
+      },
       { status: 500 }
     );
   }

@@ -1,14 +1,20 @@
 import EventCard from "@/components/EventCard";
 import ExploreBtn from "@/components/ExploreBtn";
 import type { IEvent } from "@/database";
-// import { cacheLife } from "next/cache";
+import { cacheLife } from "next/cache";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
-export default async function Home() {
-  // "use cache";
+if (!BASE_URL) {
+  throw new Error(
+    "NEXT_PUBLIC_BASE_URL environment variable is not configured"
+  );
+}
 
-  // cacheLife("hours");
+export default async function Home() {
+  "use cache";
+  cacheLife("hours");
+
   const response = await fetch(`${BASE_URL}/api/events`);
   const { events } = await response.json();
 
@@ -30,7 +36,7 @@ export default async function Home() {
           {events &&
             events.length > 0 &&
             events.map((event: IEvent) => (
-              <li key={event.title} className="list-none">
+              <li key={event.slug ?? event.title ?? ""} className="list-none">
                 <EventCard {...event} />
               </li>
             ))}
