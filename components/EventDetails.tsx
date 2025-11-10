@@ -66,7 +66,7 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
   let bookingsCount = 0;
   try {
     const request = await fetch(`${BASE_URL}/api/events/${slug}`, {
-      cache: "no-store", // Let "use cache" handle caching
+      next: { revalidate: 60 * 60 },
     });
 
     if (!request.ok) {
