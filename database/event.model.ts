@@ -121,7 +121,7 @@ const eventSchema = new Schema<IEvent>(
 
 // Generate URL-friendly slug from title
 // Converts to lowercase, replaces spaces and special chars with hyphens
-function generateSlug(title: string): string {
+export function generateSlug(title: string): string {
   return title
     .toLowerCase()
     .trim()
@@ -133,7 +133,7 @@ function generateSlug(title: string): string {
 
 // Normalize date to ISO format (YYYY-MM-DD)
 // Accepts various date formats and converts to standard ISO date string
-function normalizeDate(dateString: string): string {
+export function normalizeDate(dateString: string): string {
   const date = new Date(dateString);
   if (isNaN(date.getTime())) {
     throw new Error("Invalid date format");
@@ -145,7 +145,7 @@ function normalizeDate(dateString: string): string {
 }
 
 // Normalize time to 24-hour format (HH:MM)
-function normalizeTime(timeString: string): string {
+export function normalizeTime(timeString: string): string {
   // Remove whitespace
   const cleaned = timeString.trim();
 

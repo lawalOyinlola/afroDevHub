@@ -13,9 +13,7 @@ type SimilarEvent = SimilarEventsResult extends Array<infer Item>
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
 if (!BASE_URL) {
-  throw new Error(
-    "NEXT_PUBLIC_BASE_URL environment variable is not configured"
-  );
+  console.error("NEXT_PUBLIC_BASE_URL environment variable is not configured");
 }
 
 const EventDetailItem = ({
@@ -59,17 +57,23 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
   cacheLife("hours");
   const slug = await params;
 
+  if (!BASE_URL) {
+    console.error("NEXT_PUBLIC_BASE_URL is not configured");
+    notFound();
+  }
+
   let event;
   let bookingsCount = 0;
   try {
     const request = await fetch(`${BASE_URL}/api/events/${slug}`, {
-      next: { revalidate: 60 },
+      cache: "no-store", // Let "use cache" handle caching
     });
 
     if (!request.ok) {
-      throw new Error(
-        `Failed to fetch event: ${request.status} ${request.statusText}`
-      );
+      if (request.status === 404) {
+        notFound();
+      }
+      throw new Error(`Failed to fetch event: ${request.status}`);
     }
 
     let response;
@@ -84,11 +88,11 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
       typeof response?.bookingsCount === "number" ? response.bookingsCount : 0;
 
     if (!event) {
-      throw new Error("Event not found");
+      notFound();
     }
   } catch (error) {
     console.error("Error fetching event:", error);
-    notFound();
+    throw error;
   }
 
   const {
@@ -175,7 +179,7 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
               <p className="text-sm">Be the first to book your spot!</p>
             )}
 
-            <BookEvent eventId={event._id} slug={event.slug} />
+            <BookEvent eventId={event._id} />
           </div>
         </aside>
       </div>
@@ -185,7 +189,10 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
         <div className="events">
           {similarEvents.length > 0 &&
             similarEvents.map((similarEvent: SimilarEvent) => (
-              <EventCard key={similarEvent.title} {...similarEvent} />
+              <EventCard
+                key={similarEvent._id?.toString() || similarEvent.slug}
+                {...similarEvent}
+              />
             ))}
         </div>
       </div>
@@ -193,5 +200,3 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
   );
 };
 export default EventDetails;
-
-

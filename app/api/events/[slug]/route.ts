@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
+import { Types } from "mongoose";
 
 import connectDB from "@/lib/mongodb";
-import Event from "@/database/event.model";
+import Event, {
+  generateSlug,
+  normalizeDate,
+  normalizeTime,
+} from "@/database/event.model";
 import Booking from "@/database/booking.model";
 
 // Define route params type for type safety
@@ -11,6 +16,32 @@ type RouteParams = {
     slug: string;
   }>;
 };
+
+async function generateUniqueSlugForUpdate(
+  title: string,
+  eventId: Types.ObjectId
+): Promise<string> {
+  const baseSlug = generateSlug(title);
+  let candidateSlug = baseSlug;
+  let attempts = 0;
+  const maxAttempts = 5;
+
+  while (attempts < maxAttempts) {
+    const conflict = await Event.exists({
+      slug: candidateSlug,
+      _id: { $ne: eventId },
+    });
+
+    if (!conflict) {
+      return candidateSlug;
+    }
+
+    attempts += 1;
+    candidateSlug = `${baseSlug}-${Date.now()}-${attempts}`;
+  }
+
+  throw new Error("Failed to generate a unique slug");
+}
 
 // GET /api/events/[slug]
 // Fetches a single event by its slug
@@ -114,6 +145,8 @@ export async function PATCH(
       );
     }
 
+    const eventId = event._id as Types.ObjectId;
+
     const formData = await req.formData();
     const rawEventEntries = Array.from(formData.entries());
     const rawEvent = Object.fromEntries(
@@ -144,29 +177,58 @@ export async function PATCH(
       "organizer",
     ];
 
+    const setOperations: Record<string, unknown> = {};
+    let nextTitle: string | null = null;
+
     for (const field of requiredStringFields) {
       const incomingValue = rawEvent[field];
 
-      if (incomingValue !== undefined) {
-        if (typeof incomingValue !== "string") {
-          return NextResponse.json(
-            { message: `${field} must be a string` },
-            { status: 400 }
-          );
-        }
-
-        if (incomingValue.trim() === "") {
-          return NextResponse.json(
-            { message: `${field} cannot be empty` },
-            { status: 400 }
-          );
-        }
-
-        event[field] = incomingValue.trim();
+      if (incomingValue === undefined) {
+        continue;
       }
+
+      if (typeof incomingValue !== "string") {
+        return NextResponse.json(
+          { message: `${field} must be a string` },
+          { status: 400 }
+        );
+      }
+
+      const trimmedValue = incomingValue.trim();
+
+      if (trimmedValue === "") {
+        return NextResponse.json(
+          { message: `${field} cannot be empty` },
+          { status: 400 }
+        );
+      }
+
+      if (field === "title") {
+        nextTitle = trimmedValue;
+        setOperations.title = trimmedValue;
+        continue;
+      }
+
+      if (field === "date") {
+        try {
+          setOperations.date = normalizeDate(trimmedValue);
+        } catch {
+          return NextResponse.json(
+            { message: "Invalid date format" },
+            { status: 400 }
+          );
+        }
+        continue;
+      }
+
+      if (field === "time") {
+        setOperations.time = normalizeTime(trimmedValue);
+        continue;
+      }
+
+      setOperations[field] = trimmedValue;
     }
 
-    // Handle tags update
     if (rawEvent.tags !== undefined) {
       if (typeof rawEvent.tags !== "string") {
         return NextResponse.json(
@@ -192,10 +254,9 @@ export async function PATCH(
         );
       }
 
-      event.tags = parsedTags.map((tag) => String(tag));
+      setOperations.tags = parsedTags.map((tag) => String(tag));
     }
 
-    // Handle agenda update
     if (rawEvent.agenda !== undefined) {
       if (typeof rawEvent.agenda !== "string") {
         return NextResponse.json(
@@ -221,10 +282,28 @@ export async function PATCH(
         );
       }
 
-      event.agenda = parsedAgenda.map((item) => String(item));
+      setOperations.agenda = parsedAgenda.map((item) => String(item));
     }
 
-    // Handle optional image update
+    if (nextTitle !== null && nextTitle !== event.title) {
+      try {
+        setOperations.slug = await generateUniqueSlugForUpdate(
+          nextTitle,
+          eventId
+        );
+      } catch (slugError) {
+        return NextResponse.json(
+          {
+            message:
+              slugError instanceof Error
+                ? slugError.message
+                : "Failed to generate event slug",
+          },
+          { status: 500 }
+        );
+      }
+    }
+
     const imageEntry = formData.get("image");
     const file =
       imageEntry instanceof File && imageEntry.size > 0 ? imageEntry : null;
@@ -272,8 +351,8 @@ export async function PATCH(
             .end(buffer);
         })) as { secure_url: string; public_id: string };
 
-        event.image = uploadResult.secure_url;
-        event.imagePublicId = uploadResult.public_id;
+        setOperations.image = uploadResult.secure_url;
+        setOperations.imagePublicId = uploadResult.public_id;
       } catch (uploadError) {
         return NextResponse.json(
           {
@@ -286,21 +365,66 @@ export async function PATCH(
       }
     }
 
+    if (Object.keys(setOperations).length === 0) {
+      const existingEvent = event.toObject();
+      return NextResponse.json(
+        {
+          message: "No changes provided",
+          event: existingEvent,
+        },
+        { status: 200 }
+      );
+    }
+
+    const currentVersion =
+      typeof event.__v === "number" ? event.__v : event.__v ?? 0;
+
+    const filter = { _id: eventId, __v: currentVersion };
+    const updateInstruction: Record<string, unknown> = {
+      $set: setOperations,
+      $inc: { __v: 1 },
+    };
+
+    let updatedEvent;
+
     try {
-      await event.save();
-    } catch (saveError) {
+      updatedEvent = await Event.findOneAndUpdate(filter, updateInstruction, {
+        new: true,
+        runValidators: true,
+        context: "query",
+        timestamps: true,
+      });
+    } catch (updateError) {
       if (uploadResult?.public_id) {
         try {
           await cloudinary.uploader.destroy(uploadResult.public_id);
         } catch (cleanupError) {
           console.error(
-            "Failed to clean up Cloudinary asset after save error:",
+            "Failed to clean up Cloudinary asset after update error:",
             cleanupError
           );
         }
       }
 
-      throw saveError;
+      throw updateError;
+    }
+
+    if (!updatedEvent) {
+      if (uploadResult?.public_id) {
+        try {
+          await cloudinary.uploader.destroy(uploadResult.public_id);
+        } catch (cleanupError) {
+          console.error(
+            "Failed to clean up Cloudinary asset after conflict:",
+            cleanupError
+          );
+        }
+      }
+
+      return NextResponse.json(
+        { message: "Event update conflict. Please retry." },
+        { status: 409 }
+      );
     }
 
     if (
@@ -318,10 +442,10 @@ export async function PATCH(
       }
     }
 
-    const updatedEvent = event.toObject();
+    const updatedEventObject = updatedEvent.toObject();
 
     return NextResponse.json(
-      { message: "Event updated successfully", event: updatedEvent },
+      { message: "Event updated successfully", event: updatedEventObject },
       { status: 200 }
     );
   } catch (error) {
