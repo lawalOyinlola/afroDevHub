@@ -24,7 +24,7 @@ const bookingSchema = new Schema<IBooking>(
       lowercase: true,
       validate: {
         validator: (v: string) => {
-          // RFC 5322 compliant email validation regex
+          // Basic email validation; for full RFC compliance, prefer a dedicated library
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           return emailRegex.test(v);
         },
@@ -37,8 +37,7 @@ const bookingSchema = new Schema<IBooking>(
   }
 );
 
-// Pre-save hook to verify that referenced Event exists
-// Prevents creating bookings for non-existent events
+// Pre-save hook to ensure dependencies are loaded and booking data is valid
 bookingSchema.pre<IBooking>("save", async function (next) {
   try {
     // Only validate eventId if it's new or has been modified
@@ -49,15 +48,6 @@ bookingSchema.pre<IBooking>("save", async function (next) {
       if (!EventModel) {
         throw new Error(
           "Event model not found. Ensure Event model is imported before Booking."
-        );
-      }
-
-      // Verify the event exists in the database
-      const eventExists = await EventModel.findById(this.eventId);
-
-      if (!eventExists) {
-        throw new Error(
-          `Event with ID ${this.eventId} does not exist. Cannot create booking.`
         );
       }
     }

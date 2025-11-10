@@ -7,6 +7,7 @@ export interface IEvent extends Document {
   description: string;
   overview: string;
   image: string;
+  imagePublicId: string;
   venue: string;
   location: string;
   date: string;
@@ -50,6 +51,11 @@ const eventSchema = new Schema<IEvent>(
     image: {
       type: String,
       required: [true, "Image URL is required"],
+      trim: true,
+    },
+    imagePublicId: {
+      type: String,
+      required: [true, "Image public ID is required"],
       trim: true,
     },
     venue: {
@@ -132,7 +138,10 @@ function normalizeDate(dateString: string): string {
   if (isNaN(date.getTime())) {
     throw new Error("Invalid date format");
   }
-  return date.toISOString().split("T")[0]; // Returns YYYY-MM-DD
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 // Normalize time to 24-hour format (HH:MM)
@@ -175,17 +184,29 @@ eventSchema.pre<IEvent>("save", async function (next) {
   try {
     // Generate slug only if title is new or modified
     if (this.isModified("title")) {
-      this.slug = generateSlug(this.title);
+      const EventModel = this.constructor as Model<IEvent>;
+      const baseSlug = generateSlug(this.title);
+      let candidateSlug = baseSlug;
+      let attempts = 0;
+      const maxAttempts = 5;
 
-      // Ensure slug uniqueness by checking existing documents
-      const existingEvent = await mongoose.models.Event.findOne({
-        slug: this.slug,
-        ...(this.isNew ? {} : { _id: { $ne: this._id } }),
-      });
+      while (attempts < maxAttempts) {
+        const conflict = await EventModel.exists({
+          slug: candidateSlug,
+          ...(this.isNew ? {} : { _id: { $ne: this._id } }),
+        });
 
-      if (existingEvent) {
-        // Append timestamp to make slug unique
-        this.slug = `${this.slug}-${Date.now()}`;
+        if (!conflict) {
+          this.slug = candidateSlug;
+          break;
+        }
+
+        attempts += 1;
+        candidateSlug = `${baseSlug}-${Date.now()}-${attempts}`;
+      }
+
+      if (!this.slug) {
+        throw new Error("Failed to generate a unique slug");
       }
     }
 
@@ -205,6 +226,7 @@ eventSchema.pre<IEvent>("save", async function (next) {
       "description",
       "overview",
       "image",
+      "imagePublicId",
       "venue",
       "location",
       "date",
@@ -226,6 +248,45 @@ eventSchema.pre<IEvent>("save", async function (next) {
     next(error as Error);
   }
 });
+
+eventSchema.post(
+  "save",
+  async function (
+    error: unknown,
+    doc: IEvent,
+    next: (err?: Error | null) => void
+  ) {
+    if (
+      error instanceof mongoose.mongo.MongoServerError &&
+      error.code === 11000 &&
+      error.keyPattern?.slug
+    ) {
+      const eventDoc = doc as IEvent & { __slugRetryCount?: number };
+      const retryCount = eventDoc.__slugRetryCount ?? 0;
+      if (retryCount >= 3) {
+        return next(error);
+      }
+
+      eventDoc.__slugRetryCount = retryCount + 1;
+
+      const baseSlug = generateSlug(eventDoc.title);
+      eventDoc.slug = `${baseSlug}-${Date.now()}-${retryCount + 1}`;
+
+      try {
+        await eventDoc.save();
+        return next();
+      } catch (retryError) {
+        return next(
+          retryError instanceof Error
+            ? retryError
+            : new Error("Failed to retry event save")
+        );
+      }
+    }
+
+    next(error instanceof Error ? error : undefined);
+  }
+);
 
 //  Create and export Event model
 // Uses existing model if already compiled (prevents OverwriteModelError in development)
