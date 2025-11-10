@@ -17,11 +17,14 @@ declare global {
  * Throws an error if MONGODB_URI is not defined
  */
 const MONGODB_URI = process.env.MONGODB_URI;
+const missingMongoDbUriMessage =
+  "Please define the MONGODB_URI environment variable inside .env.local";
 
 if (!MONGODB_URI) {
-  throw new Error(
-    "Please define the MONGODB_URI environment variable inside .env.local"
-  );
+  // throw new Error(
+  //   "Please define the MONGODB_URI environment variable inside .env.local"
+  // );
+  console.error(missingMongoDbUriMessage);
 }
 
 /**
@@ -47,6 +50,10 @@ if (!cached) {
  * 4. Ensures only one connection is active at a time, even with hot reloading
  */
 async function connectDB(): Promise<mongoose.Connection> {
+  if (!MONGODB_URI) {
+    throw new Error(missingMongoDbUriMessage);
+  }
+
   // Return existing connection if available
   if (cached.conn) {
     return cached.conn;
