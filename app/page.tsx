@@ -2,6 +2,7 @@ import EventCard from "@/components/EventCard";
 import ExploreBtn from "@/components/ExploreBtn";
 import type { IEvent } from "@/database";
 import { cacheLife } from "next/cache";
+import { BRAND, A11Y } from "@/lib/constants";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -13,33 +14,59 @@ export default async function Home() {
   "use cache";
   cacheLife("hours");
 
-  const response = await fetch(`${BASE_URL}/api/events`);
-  const { events } = await response.json();
+  let events: IEvent[] = [];
+  try {
+    const response = await fetch(`${BASE_URL}/api/events`, {
+      next: { revalidate: 3600 }, // Revalidate every hour
+    });
+    const data = await response.json();
+    events = data?.events || [];
+  } catch (error) {
+    console.error("Error fetching events:", error);
+  }
 
   return (
-    <section>
-      <h1 className="text-center">
-        The Hub for Every Dev <br /> Event You Can&apos;t Miss
-      </h1>
-      <p className="text-center mt-5">
-        Hackathons, Meetups, and Conferences, All in One Place
-      </p>
+    <section aria-label="Home page">
+      <header className="flex-center flex-col *:text-center">
+        <h1 className="max-w-[20ch]">{BRAND.TAGLINE}</h1>
+        <p className="mt-5 max-w-[64ch]">
+          Discover tech events across Africa, and global events accessible to
+          African developers via remote participation or sponsorship
+          opportunities.
+        </p>
+      </header>
 
       <ExploreBtn />
 
-      <div className="mt-20 space-y-7">
-        <h3>Featured Events</h3>
+      <section
+        id="events"
+        className="mt-20 space-y-7"
+        aria-labelledby="events-heading"
+      >
+        <h2 id="events-heading">Featured Events</h2>
 
-        <ul className="events">
-          {events &&
-            events.length > 0 &&
-            events.map((event: IEvent) => (
-              <li key={event.slug ?? event.title ?? ""} className="list-none">
+        {events && events.length > 0 ? (
+          <ul className="events" role="list" aria-label={A11Y.EVENTS_SECTION}>
+            {events.map((event: IEvent) => (
+              <li
+                key={event.slug ?? event.title ?? event._id?.toString()}
+                className="list-none"
+                role="listitem"
+              >
                 <EventCard {...event} />
               </li>
             ))}
-        </ul>
-      </div>
+          </ul>
+        ) : (
+          <p
+            className="text-center text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            {A11Y.NO_EVENTS}
+          </p>
+        )}
+      </section>
     </section>
   );
 }

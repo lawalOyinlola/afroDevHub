@@ -1,23 +1,37 @@
-# DevEvent · Next.js 16 Demo
+# AfroDev Hub
 
-DevEvent is a demo application that curates developer meetups, hackathons, and conferences in one landing experience. It showcases what’s new in Next.js 16 and React 19 while integrating Tailwind CSS v4, 3D effects, and a MongoDB-backed event API.
+**AfroDev Hub** is a platform that curates developer meetups, hackathons, and conferences happening across Africa, and global events accessible to Africans via remote participation or sponsorship opportunities. Built with Next.js 16 and React 19, it showcases modern web development practices while serving as the central hub for African tech events.
+
+**Built by [Yero](https://twitter.com/HoneyzRich)** · **Live at [afrodevhub.vercel.app](https://afrodevhub.vercel.app)**
 
 ## Tech Stack
 
-- Next.js 16 App Router with React Compiler enabled
-- React 19 with Server Components and Suspense streaming
-- Tailwind CSS v4 with design tokens layered in `app/globals.css`
-- MongoDB + Mongoose for persistent event storage
-- Cloudinary image uploads via Next.js Route Handlers
-- PostHog analytics (optional) with an ingest proxy
+- **Next.js 16** App Router with React Compiler enabled
+- **React 19** with Server Components and Suspense streaming
+- **Tailwind CSS v4** with design tokens layered in `app/globals.css`
+- **MongoDB + Mongoose** for persistent event storage
+- **Cloudinary** image uploads via Next.js Route Handlers
+- **PostHog** analytics (optional) with an ingest proxy
+- **TypeScript** for type safety
+- **WebGL-based light rays** effect using `ogl` for immersive UI
 
-## Project Tour
+## Features
+
+- 🎯 **SEO Optimized**: Comprehensive metadata, Open Graph, Twitter Cards, and Schema.org structured data
+- ♿ **Accessibility First**: ARIA labels, semantic HTML, keyboard navigation, and screen reader support
+- 📱 **Responsive Design**: Mobile-first approach with optimized layouts
+- 🚀 **Performance**: Server-side rendering, caching, and optimized images
+- 🌍 **Africa-Focused**: Curated events specifically for African developers and global opportunities
+
+## Project Structure
 
 - `app/` – routes, layouts, and route handlers (API endpoints live under `app/api`)
-- `components/` – composable UI such as `Navbar`, `EventCard`, and `LightRays`
-- `lib/` – constants, types, and utility helpers (e.g. `lib/actions/event.actions.ts`)
+- `components/` – composable UI such as `Navbar`, `EventCard`, `EventDetails`, and `LightRays`
+- `lib/` – constants (SEO, branding, accessibility), types, and utility helpers
+  - `lib/constants.ts` – Centralized constants for SEO, branding, and accessibility
+  - `lib/actions/` – Server actions for event and booking management
 - `database/` – Mongoose models and connection logic
-- `public/` – static images and icons used across the marketing site
+- `public/` – static images and icons used across the site
 
 ```text
 .
@@ -82,12 +96,33 @@ Both handlers reuse the cached MongoDB connection exported from `lib/mongodb.ts`
 
 Run `pnpm build` to generate the production bundle. The project targets [Vercel](https://vercel.com) by default, but any Node.js hosting provider with support for the Next.js App Router, edge runtime, and environment variables will work. Remember to configure your secrets (`MONGODB_URI`, `CLOUDINARY_URL`, etc.) in the hosting environment.
 
+## SEO & Accessibility
+
+AfroDev Hub is built with SEO and accessibility as core features:
+
+- **SEO**: Comprehensive metadata, Open Graph tags, Twitter Cards, and Schema.org structured data (JSON-LD)
+- **Accessibility**: ARIA labels, semantic HTML, skip-to-content links, keyboard navigation support
+- **Constants**: Centralized SEO, branding, and accessibility constants in `lib/constants.ts` to prevent repetition and errors
+
+All accessibility labels, alt texts, and SEO metadata are managed through constants, ensuring consistency across the application.
+
 ## Contributing & Next Steps
 
-Want to extend the demo? Ideas:
+Want to contribute or extend the platform? Ideas:
 
 - Add authentication-gated event creation
 - Expand test coverage with Jest/React Testing Library
-- Replace the static marketing copy in `lib/constants.ts` with CMS-driven content
+- Add event filtering and search functionality
+- Implement event categories and tags
+- Add user profiles and event favorites
+- Integrate with calendar systems (Google Calendar, iCal)
 
-Feel free to open issues or PRs with improvements. Have fun exploring what’s possible with Next.js 16!
+Feel free to open issues or PRs with improvements!
+
+## Credits
+
+**Built by [Yero](https://lawaloyinlola.com)** · Connect with [Lawal Oyinlola](https://linkedin.com/in/lawaloyinlola/) on LinkedIn for updates.
+
+---
+
+Made with ❤️ for the African developer community.

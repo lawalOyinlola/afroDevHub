@@ -4,6 +4,7 @@ import Image from "next/image";
 import BookEvent from "@/components/BookEvent";
 import EventCard from "@/components/EventCard";
 import { cacheLife } from "next/cache";
+import { A11Y } from "@/lib/constants";
 
 type SimilarEventsResult = Awaited<ReturnType<typeof getSimilarEventsBySlug>>;
 type SimilarEvent = SimilarEventsResult extends Array<infer Item>
@@ -25,8 +26,8 @@ const EventDetailItem = ({
   alt: string;
   label: string;
 }) => (
-  <div className="flex-row-gap-2 items-center">
-    <Image src={icon} alt={alt} width={17} height={17} />
+  <div className="flex-row-gap-2 items-center" aria-label={label}>
+    <Image src={icon} alt={alt} width={17} height={17} aria-hidden="true" />
     <p>{label}</p>
   </div>
 );
@@ -117,21 +118,23 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
   const similarEvents = await getSimilarEventsBySlug(slug);
 
   return (
-    <section id="event">
-      <div className="header">
-        <h1>Event Description</h1>
-        <p>{description}</p>
-      </div>
+    <article id="event" itemScope itemType="https://schema.org/Event">
+      <header className="event-header">
+        <h1 itemProp="name">{event.title || "Event"}</h1>
+        <p itemProp="description">{description}</p>
+      </header>
 
       <div className="details">
         {/*    Left Side - Event Content */}
         <div className="content">
           <Image
             src={image}
-            alt="Event Banner"
+            alt={`${event.title || "Event"} - ${A11Y.ALT.EVENT_IMAGE}`}
             width={800}
             height={800}
             className="banner"
+            itemProp="image"
+            priority
           />
 
           <section className="flex-col-gap-2">
@@ -142,17 +145,45 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
           <section className="flex-col-gap-2">
             <h2>Event Details</h2>
 
+            <div
+              itemProp="startDate"
+              content={`${date}T${time}`}
+              className="sr-only"
+            >
+              {date} at {time}
+            </div>
+
             <EventDetailItem
               icon="/icons/calendar.svg"
-              alt="calendar"
+              alt={A11Y.ALT.CALENDAR_ICON}
               label={date}
             />
-            <EventDetailItem icon="/icons/clock.svg" alt="clock" label={time} />
-            <EventDetailItem icon="/icons/pin.svg" alt="pin" label={location} />
-            <EventDetailItem icon="/icons/mode.svg" alt="mode" label={mode} />
+            <EventDetailItem
+              icon="/icons/clock.svg"
+              alt={A11Y.ALT.CLOCK_ICON}
+              label={time}
+            />
+            <EventDetailItem
+              icon="/icons/pin.svg"
+              alt={A11Y.ALT.LOCATION_ICON}
+              label={location}
+            />
+            <div
+              itemProp="location"
+              itemScope
+              itemType="https://schema.org/Place"
+              className="sr-only"
+            >
+              <span itemProp="name">{location}</span>
+            </div>
+            <EventDetailItem
+              icon="/icons/mode.svg"
+              alt={A11Y.ALT.MODE_ICON}
+              label={mode}
+            />
             <EventDetailItem
               icon="/icons/audience.svg"
-              alt="audience"
+              alt={A11Y.ALT.AUDIENCE_ICON}
               label={audience}
             />
           </section>
@@ -168,35 +199,51 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
         </div>
 
         {/*    Right Side - Booking Form */}
-        <aside className="booking">
+        <aside className="booking" aria-label="Event booking">
           <div className="signup-card">
             <h2>Book Your Spot</h2>
             {bookings > 0 ? (
-              <p className="text-sm">
-                Join {bookings} people who have already booked their spot!
+              <p className="text-sm" role="status" aria-live="polite">
+                Join {bookings} {bookings === 1 ? "person" : "people"} who{" "}
+                {bookings === 1 ? "has" : "have"} already booked their spot!
               </p>
             ) : (
-              <p className="text-sm">Be the first to book your spot!</p>
+              <p className="text-sm" role="status">
+                Be the first to book your spot!
+              </p>
             )}
 
-            <BookEvent eventId={event._id} />
+            <div aria-label={A11Y.BOOK_EVENT}>
+              <BookEvent eventId={event._id} />
+            </div>
           </div>
         </aside>
       </div>
 
-      <div className="flex w-full flex-col gap-4 pt-20">
-        <h2>Similar Events</h2>
-        <div className="events">
-          {similarEvents.length > 0 &&
-            similarEvents.map((similarEvent: SimilarEvent) => (
-              <EventCard
+      <section
+        className="flex w-full flex-col gap-4 pt-20"
+        aria-labelledby="similar-events-heading"
+      >
+        <h2 id="similar-events-heading">Similar Events</h2>
+        {similarEvents.length > 0 ? (
+          <ul className="events" role="list" aria-label="Similar events list">
+            {similarEvents.map((similarEvent: SimilarEvent) => (
+              <li
                 key={similarEvent._id?.toString() || similarEvent.slug}
-                {...similarEvent}
-              />
+                className="list-none"
+                role="listitem"
+              >
+                <EventCard {...similarEvent} />
+              </li>
             ))}
-        </div>
-      </div>
-    </section>
+          </ul>
+        ) : (
+          <p className="text-center text-muted-foreground" role="status">
+            No similar events found at this time.
+          </p>
+        )}
+      </section>
+    </article>
   );
 };
 export default EventDetails;
