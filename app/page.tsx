@@ -15,14 +15,20 @@ export default async function Home() {
   cacheLife("hours");
 
   let events: IEvent[] = [];
-  try {
-    const response = await fetch(`${BASE_URL}/api/events`, {
-      next: { revalidate: 3600 }, // Revalidate every hour
-    });
-    const data = await response.json();
-    events = data?.events || [];
-  } catch (error) {
-    console.error("Error fetching events:", error);
+  if (!BASE_URL) {
+    console.error(
+      "NEXT_PUBLIC_BASE_URL environment variable is not configured"
+    );
+  } else {
+    try {
+      const response = await fetch(`${BASE_URL}/api/events`, {
+        next: { revalidate: 3600 }, // Revalidate every hour
+      });
+      const data = await response.json();
+      events = data?.events || [];
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    }
   }
 
   return (
@@ -40,6 +46,7 @@ export default async function Home() {
 
       <section
         id="events"
+        tabIndex={-1}
         className="mt-20 space-y-7"
         aria-labelledby="events-heading"
       >
