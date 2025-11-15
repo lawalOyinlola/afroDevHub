@@ -64,7 +64,7 @@ const EventCard = ({ title, image, slug, location, date, time }: Props) => {
               height={14}
               aria-hidden="true"
             />
-            <time>{time}</time>
+            <time dateTime={time}>{time}</time>
           </div>
         </div>
       </Link>

@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
-import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
+import {
+  getSimilarEventsBySlug,
+  getEventBySlug,
+} from "@/lib/actions/event.actions";
 import Image from "next/image";
 import BookEvent from "@/components/BookEvent";
 import EventCard from "@/components/EventCard";
@@ -11,23 +14,16 @@ type SimilarEvent = SimilarEventsResult extends Array<infer Item>
   ? Item
   : never;
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
-
-if (!BASE_URL) {
-  console.error("NEXT_PUBLIC_BASE_URL environment variable is not configured");
-}
-
 const EventDetailItem = ({
   icon,
-  alt,
+
   label,
 }: {
   icon: string;
-  alt: string;
   label: string;
 }) => (
-  <div className="flex-row-gap-2 items-center" aria-label={label}>
-    <Image src={icon} alt={alt} width={17} height={17} aria-hidden="true" />
+  <div className="flex-row-gap-2 items-center">
+    <Image src={icon} alt="" width={17} height={17} aria-hidden="true" />
     <p>{label}</p>
   </div>
 );
@@ -58,43 +54,13 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
   cacheLife("hours");
   const slug = await params;
 
-  if (!BASE_URL) {
-    console.error("NEXT_PUBLIC_BASE_URL is not configured");
+  const result = await getEventBySlug(slug);
+
+  if (!result) {
     notFound();
   }
 
-  let event;
-  let bookingsCount = 0;
-  try {
-    const request = await fetch(`${BASE_URL}/api/events/${slug}`, {
-      next: { revalidate: 60 * 60 },
-    });
-
-    if (!request.ok) {
-      if (request.status === 404) {
-        notFound();
-      }
-      throw new Error(`Failed to fetch event: ${request.status}`);
-    }
-
-    let response;
-    try {
-      response = await request.json();
-    } catch {
-      throw new Error("Failed to parse event response");
-    }
-
-    event = response?.event;
-    bookingsCount =
-      typeof response?.bookingsCount === "number" ? response.bookingsCount : 0;
-
-    if (!event) {
-      notFound();
-    }
-  } catch (error) {
-    console.error("Error fetching event:", error);
-    throw error;
-  }
+  const { event, bookingsCount } = result;
 
   const {
     description,
@@ -114,7 +80,6 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
 
   const bookings = bookingsCount;
 
-  //   const similarEvents: IEvent[] = await getSimilarEventsBySlug(slug);
   const similarEvents = await getSimilarEventsBySlug(slug);
 
   return (
@@ -145,29 +110,17 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
           <section className="flex-col-gap-2">
             <h2>Event Details</h2>
 
-            <div
+            <time
               itemProp="startDate"
-              content={`${date}T${time}`}
+              dateTime={`${date}T${time}`}
               className="sr-only"
             >
               {date} at {time}
-            </div>
+            </time>
 
-            <EventDetailItem
-              icon="/icons/calendar.svg"
-              alt={A11Y.ALT.CALENDAR_ICON}
-              label={date}
-            />
-            <EventDetailItem
-              icon="/icons/clock.svg"
-              alt={A11Y.ALT.CLOCK_ICON}
-              label={time}
-            />
-            <EventDetailItem
-              icon="/icons/pin.svg"
-              alt={A11Y.ALT.LOCATION_ICON}
-              label={location}
-            />
+            <EventDetailItem icon="/icons/calendar.svg" label={date} />
+            <EventDetailItem icon="/icons/clock.svg" label={time} />
+            <EventDetailItem icon="/icons/pin.svg" label={location} />
             <div
               itemProp="location"
               itemScope
@@ -176,16 +129,8 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
             >
               <span itemProp="name">{location}</span>
             </div>
-            <EventDetailItem
-              icon="/icons/mode.svg"
-              alt={A11Y.ALT.MODE_ICON}
-              label={mode}
-            />
-            <EventDetailItem
-              icon="/icons/audience.svg"
-              alt={A11Y.ALT.AUDIENCE_ICON}
-              label={audience}
-            />
+            <EventDetailItem icon="/icons/mode.svg" label={mode} />
+            <EventDetailItem icon="/icons/audience.svg" label={audience} />
           </section>
 
           <EventAgenda agendaItems={agenda} />
@@ -208,7 +153,7 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
                 {bookings === 1 ? "has" : "have"} already booked their spot!
               </p>
             ) : (
-              <p className="text-sm" role="status">
+              <p className="text-sm" role="status" aria-live="polite">
                 Be the first to book your spot!
               </p>
             )}

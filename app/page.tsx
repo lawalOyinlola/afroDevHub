@@ -32,7 +32,7 @@ export default async function Home() {
   }
 
   return (
-    <section aria-label="Home page">
+    <main>
       <header className="flex-center flex-col *:text-center">
         <h1 className="max-w-[20ch]">{BRAND.TAGLINE}</h1>
         <p className="mt-5 max-w-[64ch]">
@@ -53,12 +53,11 @@ export default async function Home() {
         <h2 id="events-heading">Featured Events</h2>
 
         {events && events.length > 0 ? (
-          <ul className="events" role="list" aria-label={A11Y.EVENTS_SECTION}>
+          <ul className="events" aria-label={A11Y.EVENTS_SECTION}>
             {events.map((event: IEvent) => (
               <li
                 key={event.slug ?? event.title ?? event._id?.toString()}
                 className="list-none"
-                role="listitem"
               >
                 <EventCard {...event} />
               </li>
@@ -74,6 +73,6 @@ export default async function Home() {
           </p>
         )}
       </section>
-    </section>
+    </main>
   );
 }

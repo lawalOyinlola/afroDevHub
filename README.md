@@ -108,7 +108,7 @@ All accessibility labels, alt texts, and SEO metadata are managed through consta
 
 ## Contributing & Next Steps
 
-Want to contribute or extend the platform? Ideas:
+Have an idea? Want to contribute or extend the platform? Ideas:
 
 - Add authentication-gated event creation
 - Expand test coverage with Jest/React Testing Library
@@ -117,7 +117,7 @@ Want to contribute or extend the platform? Ideas:
 - Add user profiles and event favorites
 - Integrate with calendar systems (Google Calendar, iCal)
 
-Feel free to open issues or PRs with improvements!
+Feel free to open issues or PRs with improvements; we'd love to see what you build!
 
 ## Credits
 

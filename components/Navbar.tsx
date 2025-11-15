@@ -4,7 +4,7 @@ import { BRAND, NAV_LINKS, A11Y } from "@/lib/constants";
 
 const Navbar = () => {
   return (
-    <header role="banner" className="header">
+    <header className="header">
       <nav aria-label={A11Y.NAV_LABEL}>
         <Link
           href="/"

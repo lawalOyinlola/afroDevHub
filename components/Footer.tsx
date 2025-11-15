@@ -6,10 +6,7 @@ export default async function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer
-      className="mt-auto py-8 text-center text-sm text-muted-foreground"
-      role="contentinfo"
-    >
+    <footer className="mt-auto py-8 text-center text-sm text-muted-foreground">
       <p className="mt-2">
         © {currentYear} {BRAND.NAME}. All rights reserved.
       </p>

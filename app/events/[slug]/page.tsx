@@ -2,28 +2,11 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import EventDetails from "@/components/EventDetails";
 import { BRAND, SEO, URLS, A11Y } from "@/lib/constants";
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
+import { getEventBySlug } from "@/lib/actions/event.actions";
 
 async function getEvent(slug: string) {
-  if (!BASE_URL) {
-    return null;
-  }
-
-  try {
-    const response = await fetch(`${BASE_URL}/api/events/${slug}`, {
-      next: { revalidate: 3600 }, // Revalidate every hour
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data?.event || null;
-  } catch {
-    return null;
-  }
+  const result = await getEventBySlug(slug);
+  return result?.event || null;
 }
 
 export async function generateMetadata({

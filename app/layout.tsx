@@ -5,7 +5,7 @@ import "./globals.css";
 import LightRays from "@/components/LightRays";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { BRAND, SEO, URLS, CREATOR } from "@/lib/constants";
+import { BRAND, SEO, URLS, CREATOR, A11Y } from "@/lib/constants";
 
 const schibstedGrotesk = Schibsted_Grotesk({
   variable: "--font-schibsted-grotesk",
@@ -123,7 +123,7 @@ export default function RootLayout({
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md"
         >
-          Skip to main content
+          {A11Y.SKIP_TO_CONTENT}
         </a>
         <Navbar />
         <div
