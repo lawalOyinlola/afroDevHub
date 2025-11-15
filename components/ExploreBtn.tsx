@@ -1,24 +1,35 @@
 "use client";
 
 import Image from "next/image";
+import { A11Y } from "@/lib/constants";
 
 const ExploreBtn = () => {
+  const handleClick = () => {
+    const eventsSection = document.getElementById("events");
+    if (eventsSection) {
+      eventsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      eventsSection.focus();
+    }
+  };
+
   return (
     <button
       type="button"
       id="explore-btn"
       className="mt-7 mx-auto"
-      onClick={() => console.log("CLICK")}
+      onClick={handleClick}
+      aria-label={A11Y.EXPLORE_EVENTS}
     >
-      <a href="#events">
+      <span className="flex items-center gap-2">
         Explore Events
         <Image
           src="/icons/arrow-down.svg"
-          alt="arrow-down"
+          alt={A11Y.ALT.ARROW_DOWN}
           width={24}
           height={24}
+          aria-hidden="true"
         />
-      </a>
+      </span>
     </button>
   );
 };

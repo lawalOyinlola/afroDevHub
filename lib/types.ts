@@ -15,6 +15,7 @@ export type ProjectInfo = {
 export type NavLink = {
   href: string;
   label: string;
+  ariaLabel?: string;
 };
 
 export type EventItem = {
